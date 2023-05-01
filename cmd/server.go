@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/CafeKetab/user-go/internal/config"
-	"github.com/CafeKetab/user-go/pkg/logger"
+	"github.com/CafeKetab/user/internal/config"
+	"github.com/CafeKetab/user/pkg/logger"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"

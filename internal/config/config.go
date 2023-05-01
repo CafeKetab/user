@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/CafeKetab/user-go/pkg/logger"
+	"github.com/CafeKetab/user/pkg/logger"
 )
 
 type Config struct {

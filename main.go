@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/CafeKetab/user-go/cmd"
+	"github.com/CafeKetab/user/cmd"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
