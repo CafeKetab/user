@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS users(
+	id SERIAL PRIMARY KEY,
+	user_information_id INTEGER REFERENCES user_informations (id),
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
