@@ -10,7 +10,7 @@ import (
 )
 
 type AuthClient interface {
-	Authenticate(ctx context.Context, token string) (uint64, error)
+	GenerateToken(ctx context.Context, id uint64) (string, error)
 }
 
 type authClient struct {
