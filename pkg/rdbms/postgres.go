@@ -14,7 +14,7 @@ type postgresWrapper struct {
 	*rdbms
 }
 
-func NewPostgresql(cfg *Config) (RDBMS, error) {
+func NewPostgres(cfg *Config) (RDBMS, error) {
 	connString := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Database,

@@ -35,7 +35,7 @@ func (m *Migrate) main(cfg *config.Config, args []string, trap chan os.Signal) {
 		logger.Fatal("invalid arguments given", zap.Any("args", args))
 	}
 
-	rdbms, err := rdbms.NewPostgresql(cfg.RDBMS)
+	rdbms, err := rdbms.NewPostgres(cfg.RDBMS)
 	if err != nil {
 		logger.Fatal("Error creating rdbms", zap.Error(err))
 	}
