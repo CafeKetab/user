@@ -12,7 +12,21 @@ import (
 
 type Repository interface {
 	MigrateUp(context.Context) error
+
 	MigrateDown(context.Context) error
+
+	CreateUser(ctx context.Context, user *models.User) error
+
+	FindUserById(ctx context.Context, id uint64) (*models.User, error)
+
+	FindUserByEmail(ctx context.Context, email string) (*models.User, error)
+
+	FindUserByEmailAndPassword(ctx context.Context, email, password string) (*models.User, error)
+
+	// UpdateUser will only updates the first_name and last_name or password
+	UpdateUser(ctx context.Context, user *models.User) error
+
+	DeleteUser(ctx context.Context, user *models.User) error
 }
 
 type repository struct {
@@ -36,9 +50,7 @@ func (r *repository) MigrateDown(ctx context.Context) error {
 	return r.rdbms.MigrateDown(r.migrationDirectory)
 }
 
-const (
-	QueryCreateUser = `INSERT INTO users(first_name, last_name, email, password) VALUES(?, ?, ?, ?);`
-)
+const QueryCreateUser = `INSERT INTO users(first_name, last_name, email, password) VALUES(?, ?, ?, ?);`
 
 func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 	if len(user.Email) == 0 || len(user.Password) == 0 {
@@ -71,21 +83,6 @@ func (r *repository) FindUserById(ctx context.Context, id uint64) (*models.User,
 	return user, nil
 }
 
-const QueryFindUserByEmailAndPassword = "SELECT id, first_name, last_name, created_at FROM users WHERE email=? AND password=?"
-
-func (r *repository) FindUserByEmailAndPassword(ctx context.Context, email, password string) (*models.User, error) {
-	user := &models.User{Email: email, Password: password}
-
-	args := []interface{}{email, password}
-	dest := []interface{}{&user.Id, &user.FirstName, &user.LastName, &user.CreatedAt}
-	if err := r.rdbms.Read(QueryFindUserByEmailAndPassword, args, dest); err != nil {
-		r.logger.Error("Error find user by email and password", zap.Error(err))
-		return nil, err
-	}
-
-	return user, nil
-}
-
 const QueryFindUserByEmail = "SELECT id, first_name, last_name, created_at FROM users WHERE email=?"
 
 func (r *repository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
@@ -101,9 +98,23 @@ func (r *repository) FindUserByEmail(ctx context.Context, email string) (*models
 	return user, nil
 }
 
+const QueryFindUserByEmailAndPassword = "SELECT id, first_name, last_name, created_at FROM users WHERE email=? AND password=?"
+
+func (r *repository) FindUserByEmailAndPassword(ctx context.Context, email, password string) (*models.User, error) {
+	user := &models.User{Email: email, Password: password}
+
+	args := []interface{}{email, password}
+	dest := []interface{}{&user.Id, &user.FirstName, &user.LastName, &user.CreatedAt}
+	if err := r.rdbms.Read(QueryFindUserByEmailAndPassword, args, dest); err != nil {
+		r.logger.Error("Error find user by email and password", zap.Error(err))
+		return nil, err
+	}
+
+	return user, nil
+}
+
 const QueryUpdateUser = "UPDATE users SET first_name=?, last_name=?, password=? WHERE id=?;"
 
-// UpdateUser will only updates the first_name and last_name or password
 func (r *repository) UpdateUser(ctx context.Context, user *models.User) error {
 	args := []interface{}{user.FirstName, user.LastName, user.Password, user.Id}
 	if err := r.rdbms.Update(QueryUpdateUser, args); err != nil {

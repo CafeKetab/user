@@ -5,15 +5,17 @@ import (
 	"fmt"
 
 	"github.com/CafeKetab/user/internal/api/grpc"
+	"github.com/CafeKetab/user/internal/repository"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 )
 
 type Server struct {
-	config *Config
-	logger *zap.Logger
-	auth   grpc.AuthClient
-	app    *fiber.App
+	config     *Config
+	logger     *zap.Logger
+	repository repository.Repository
+	auth       grpc.AuthClient
+	app        *fiber.App
 }
 
 func New(cfg *Config, log *zap.Logger, auth grpc.AuthClient) *Server {
@@ -22,10 +24,9 @@ func New(cfg *Config, log *zap.Logger, auth grpc.AuthClient) *Server {
 	server.app = fiber.New(fiber.Config{JSONEncoder: json.Marshal, JSONDecoder: json.Unmarshal})
 
 	v1 := server.app.Group("/v1")
-	_ = v1
-	// v1.Group("/users", server.redirect)
-	// v1.Group("/books", server.redirect)
-	// v1.Group("/books", server.authenticate, server.redirect)
+	v1.Group("/register", server.register)
+	v1.Group("/login", server.login)
+	v1.Group("/update", server.fetchUserId, server.update)
 
 	return server
 }
