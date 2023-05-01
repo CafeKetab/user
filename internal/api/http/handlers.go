@@ -73,6 +73,7 @@ func (handler *Server) login(c *fiber.Ctx) error {
 
 // get user by id
 func (handler *Server) user(c *fiber.Ctx) error {
+	c.Params("id")
 	return nil
 }
 

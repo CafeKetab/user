@@ -24,9 +24,11 @@ func New(cfg *Config, log *zap.Logger, auth grpc.AuthClient) *Server {
 	server.app = fiber.New(fiber.Config{JSONEncoder: json.Marshal, JSONDecoder: json.Unmarshal})
 
 	v1 := server.app.Group("/v1")
-	v1.Group("/register", server.register)
-	v1.Group("/login", server.login)
-	v1.Group("/update", server.fetchUserId, server.update)
+	v1.Post("/register", server.register)
+	v1.Post("/login", server.login)
+	v1.Post("/:id<int>", server.fetchUserId, server.user)
+	v1.Get("/me", server.fetchUserId, server.me)
+	v1.Post("/update", server.fetchUserId, server.update)
 
 	return server
 }
