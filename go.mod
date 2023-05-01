@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/CafeKetab/PBs v0.1.5
 	github.com/davecgh/go-spew v1.1.1
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gofiber/fiber/v2 v2.44.0
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/knadh/koanf/providers/env v0.1.0

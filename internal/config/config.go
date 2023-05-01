@@ -1,11 +1,11 @@
 package config
 
 import (
-	"github.com/CafeKetab/user/internal/repository"
 	"github.com/CafeKetab/user/pkg/logger"
+	"github.com/CafeKetab/user/pkg/rdbms"
 )
 
 type Config struct {
-	Logger     *logger.Config     `koanf:"logger"`
-	Repository *repository.Config `koanf:"repository"`
+	Logger *logger.Config `koanf:"logger"`
+	RDBMS  *rdbms.Config  `koanf:"rdbms"`
 }

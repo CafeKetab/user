@@ -2,14 +2,11 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"errors"
-	"fmt"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
+	"github.com/CafeKetab/user/internal/models"
+	"github.com/CafeKetab/user/pkg/rdbms"
+
 	"go.uber.org/zap"
 )
 
@@ -19,58 +16,50 @@ type Repository interface {
 }
 
 type repository struct {
-	logger *zap.Logger
-	db     *sql.DB
+	logger             *zap.Logger
+	rdbms              rdbms.RDBMS
+	migrationDirectory string
 }
 
-func New(cfg *Config, lg *zap.Logger) Repository {
-	r := &repository{logger: lg}
-
-	connString := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Database,
-	)
-
-	db, err := sql.Open("postgres", connString)
-	if err != nil {
-		lg.Panic("Error openning postgresql connection", zap.Error(err))
-	}
-	r.db = db
+func New(lg *zap.Logger, rdbms rdbms.RDBMS) Repository {
+	r := &repository{logger: lg, rdbms: rdbms}
+	r.migrationDirectory = "file://internal/repository/migrations"
 
 	return r
 }
 
 func (r *repository) MigrateUp(ctx context.Context) error {
-	do := func(m *migrate.Migrate) error { return m.Up() }
-	return r.migrate(ctx, do)
+	return r.rdbms.MigrateUp(r.migrationDirectory)
 }
 
 func (r *repository) MigrateDown(ctx context.Context) error {
-	do := func(m *migrate.Migrate) error { return m.Down() }
-	return r.migrate(ctx, do)
+	return r.rdbms.MigrateDown(r.migrationDirectory)
 }
 
-func (r *repository) migrate(ctx context.Context, do func(*migrate.Migrate) error) error {
-	instance, err := postgres.WithInstance(r.db, &postgres.Config{})
+const (
+	QueryCreateUserInformation = `INSERT INTO user_informations(first_name, last_name) VALUES(?, ?);`
+	QueryCreateUser            = `INSERT INTO users(email, password, user_information_id) VALUES(?, ?, ?);`
+)
+
+func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
+	if len(user.Email) == 0 || len(user.Password) == 0 {
+		return errors.New("Insufficient information for user")
+	}
+
+	userInformationArgs := []interface{}{user.FirstName, user.LastName}
+	userInformationId, err := r.rdbms.Create(QueryCreateUserInformation, userInformationArgs)
 	if err != nil {
-		errorString := "Error creating migrate instance"
-		r.logger.Error(errorString, zap.Error(err))
-		return errors.New(errorString)
+		r.logger.Error("Error creating user_information", zap.Error(err))
+		return err
 	}
 
-	source := "file://internal/repository/migrations"
-	migrator, err := migrate.NewWithDatabaseInstance(source, "postgres", instance)
+	userArgs := []interface{}{user.Email, user.Password, userInformationId}
+	userId, err := r.rdbms.Create(QueryCreateUser, userArgs)
 	if err != nil {
-		errorString := "Error loading migration files"
-		r.logger.Error(errorString, zap.Error(err))
-		return errors.New(errorString)
+		r.logger.Error("Error creating user", zap.Error(err))
+		return err
 	}
 
-	if err := do(migrator); err != nil && err != migrate.ErrNoChange {
-		errorString := "Error doing migrations"
-		r.logger.Error(errorString, zap.Error(err))
-		return errors.New(errorString)
-	}
-
+	user.Id = userId
 	return nil
 }

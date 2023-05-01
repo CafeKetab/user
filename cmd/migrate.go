@@ -7,6 +7,7 @@ import (
 	"github.com/CafeKetab/user/internal/config"
 	"github.com/CafeKetab/user/internal/repository"
 	"github.com/CafeKetab/user/pkg/logger"
+	"github.com/CafeKetab/user/pkg/rdbms"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -34,7 +35,12 @@ func (m *Migrate) main(cfg *config.Config, args []string, trap chan os.Signal) {
 		logger.Fatal("invalid arguments given", zap.Any("args", args))
 	}
 
-	repository := repository.New(cfg.Repository, logger)
+	rdbms, err := rdbms.NewPostgresql(cfg.RDBMS)
+	if err != nil {
+		logger.Fatal("Error creating rdbms", zap.Error(err))
+	}
+
+	repository := repository.New(logger, rdbms)
 	repository.MigrateUp(context.Background())
 
 	var callsMigrator func(context.Context) error

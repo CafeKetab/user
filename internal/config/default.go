@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/CafeKetab/user/internal/repository"
 	"github.com/CafeKetab/user/pkg/logger"
+	"github.com/CafeKetab/user/pkg/rdbms"
 )
 
 func Default() *Config {
@@ -12,7 +12,7 @@ func Default() *Config {
 			Level:       "debug",
 			Encoding:    "console",
 		},
-		Repository: &repository.Config{
+		RDBMS: &rdbms.Config{
 			Host:     "localhost",
 			Port:     5432,
 			Username: "TEST_USER",
