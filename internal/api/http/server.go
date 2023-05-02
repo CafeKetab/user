@@ -26,9 +26,10 @@ func New(cfg *Config, log *zap.Logger, auth grpc.AuthClient) *Server {
 	v1 := server.app.Group("/v1")
 	v1.Post("/register", server.register)
 	v1.Post("/login", server.login)
-	v1.Post("/:id<int>", server.fetchUserId, server.user)
+	v1.Get("/:id<uint64>", server.fetchUserId, server.user)
 	v1.Get("/me", server.fetchUserId, server.me)
-	v1.Post("/update", server.fetchUserId, server.update)
+	v1.Post("/update-information", server.fetchUserId, server.updateInformation)
+	v1.Post("/update-password", server.fetchUserId, server.updatePassword)
 
 	return server
 }
