@@ -50,7 +50,7 @@ func (r *repository) MigrateDown(ctx context.Context) error {
 	return r.rdbms.MigrateDown(r.migrationDirectory)
 }
 
-const QueryCreateUser = `INSERT INTO users(first_name, last_name, email, password) VALUES(?, ?, ?, ?);`
+const QueryCreateUser = `INSERT INTO users(first_name, last_name, email, password) VALUES($1, $2, $3, $4) RETURNING id;`
 
 func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 	if len(user.Email) == 0 || len(user.Password) == 0 {
@@ -68,7 +68,7 @@ func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-const QueryFindUserById = "SELECT first_name, last_name, email, password, created_at FROM users WHERE id=?"
+const QueryFindUserById = "SELECT first_name, last_name, email, password, created_at FROM users WHERE id=$1;"
 
 func (r *repository) FindUserById(ctx context.Context, id uint64) (*models.User, error) {
 	user := &models.User{Id: id}
@@ -83,7 +83,10 @@ func (r *repository) FindUserById(ctx context.Context, id uint64) (*models.User,
 	return user, nil
 }
 
-const QueryFindUserByEmail = "SELECT id, first_name, last_name, created_at FROM users WHERE email=?"
+const QueryFindUserByEmail = `
+	SELECT id, first_name, last_name, password, created_at
+	FROM users
+	WHERE email=$1;`
 
 func (r *repository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user := &models.User{Email: email}
@@ -91,6 +94,10 @@ func (r *repository) FindUserByEmail(ctx context.Context, email string) (*models
 	args := []interface{}{email}
 	dest := []interface{}{&user.Id, &user.FirstName, &user.LastName, &user.Password, &user.CreatedAt}
 	if err := r.rdbms.Read(QueryFindUserByEmail, args, dest); err != nil {
+		if err.Error() == rdbms.ErrReadNotFound {
+			return nil, err
+		}
+
 		r.logger.Error("Error find user by email", zap.Error(err))
 		return nil, err
 	}
@@ -98,7 +105,7 @@ func (r *repository) FindUserByEmail(ctx context.Context, email string) (*models
 	return user, nil
 }
 
-const QueryFindUserByEmailAndPassword = "SELECT id, first_name, last_name, created_at FROM users WHERE email=? AND password=?"
+const QueryFindUserByEmailAndPassword = "SELECT id, first_name, last_name, created_at FROM users WHERE email=$1 AND password=$2;"
 
 func (r *repository) FindUserByEmailAndPassword(ctx context.Context, email, password string) (*models.User, error) {
 	user := &models.User{Email: email, Password: password}
@@ -113,7 +120,7 @@ func (r *repository) FindUserByEmailAndPassword(ctx context.Context, email, pass
 	return user, nil
 }
 
-const QueryUpdateUser = "UPDATE users SET first_name=?, last_name=?, password=? WHERE id=?;"
+const QueryUpdateUser = "UPDATE users SET first_name=?, last_name=?, password=? WHERE id=$1;"
 
 func (r *repository) UpdateUser(ctx context.Context, user *models.User) error {
 	args := []interface{}{user.FirstName, user.LastName, user.Password, user.Id}
@@ -125,7 +132,7 @@ func (r *repository) UpdateUser(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-const QueryDeleteUser = "DELETE FROM users WHERE id=?;"
+const QueryDeleteUser = "DELETE FROM users WHERE id=$1;"
 
 func (r *repository) DeleteUser(ctx context.Context, user *models.User) error {
 	args := []interface{}{user.Id}

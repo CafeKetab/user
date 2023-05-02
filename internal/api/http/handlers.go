@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/CafeKetab/user/internal/models"
 	"github.com/CafeKetab/user/pkg/rdbms"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -15,7 +16,7 @@ func (handler *Server) register(c *fiber.Ctx) error {
 	request := struct{ Email, Password string }{}
 	if err := c.BodyParser(&request); err != nil {
 		errString := "Error parsing request body"
-		handler.logger.Error(errString, zap.Error(err))
+		handler.logger.Error(errString, zap.Any("request", request), zap.Error(err))
 		return c.Status(http.StatusBadRequest).SendString(errString)
 	}
 
@@ -24,13 +25,13 @@ func (handler *Server) register(c *fiber.Ctx) error {
 		errString := "Error while retrieving data from database"
 		handler.logger.Error(errString, zap.Error(err))
 		return c.Status(http.StatusInternalServerError).SendString(errString)
-	} else if err == nil || user.Id != 0 {
+	} else if err == nil || (user != nil && user.Id != 0) {
 		errString := "User with given email already exists"
 		handler.logger.Error(errString, zap.String("email", request.Email))
 		return c.Status(http.StatusBadRequest).SendString(errString)
 	}
 
-	user.Email, user.Password = request.Email, request.Password
+	user = &models.User{Email: request.Email, Password: request.Password}
 	if err := handler.repository.CreateUser(ctx, user); err != nil {
 		errString := "Error happened while creating the user"
 		handler.logger.Error(errString, zap.Error(err))
@@ -50,7 +51,8 @@ func (handler *Server) register(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).SendString(errString)
 	}
 
-	return c.Status(http.StatusCreated).SendString(token)
+	response := map[string]string{"Token": token}
+	return c.Status(http.StatusCreated).JSON(&response)
 }
 
 func (handler *Server) login(c *fiber.Ctx) error {
@@ -84,7 +86,8 @@ func (handler *Server) login(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).SendString(errString)
 	}
 
-	return c.Status(http.StatusOK).SendString(token)
+	response := map[string]string{"Token": token}
+	return c.Status(http.StatusOK).JSON(&response)
 }
 
 // get user by id

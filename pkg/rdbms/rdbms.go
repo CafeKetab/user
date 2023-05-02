@@ -3,6 +3,7 @@ package rdbms
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -11,13 +12,13 @@ type RDBMS interface {
 
 	MigrateDown(source string) error
 
-	Create(query string, args []interface{}) (uint64, error)
+	Create(query string, args []any) (uint64, error)
 
-	Read(query string, args []interface{}, dest ...interface{}) error
+	Read(query string, args []any, dest []any) error
 
-	Update(query string, args []interface{}) error
+	Update(query string, args []any) error
 
-	Delete(query string, args []interface{}) error
+	Delete(query string, args []any) error
 }
 
 type rdbms struct {
@@ -38,73 +39,68 @@ var (
 	ErrDelete = "error when tying to delete entry"
 )
 
-func (db *rdbms) Create(query string, args []interface{}) (uint64, error) {
+func (db *rdbms) Create(query string, args []any) (uint64, error) {
 	stmt, err := db.db.Prepare(query)
 	if err != nil {
-		return 0, errors.New(ErrPrepareStatement)
+		return 0, fmt.Errorf("%s\n%v", ErrPrepareStatement, err)
 	}
 	defer stmt.Close()
 
-	insertResult, err := stmt.Exec(args)
-	if err != nil {
+	var lastInsertId int
+	if err = stmt.QueryRow(args...).Scan(&lastInsertId); err != nil {
 		if strings.Contains(err.Error(), "Duplicate entry") {
-			return 0, errors.New(ErrDuplicate)
+			return 0, fmt.Errorf("%s\n%v", ErrDuplicate, err)
 		}
 
-		return 0, errors.New(ErrCreate)
+		return 0, fmt.Errorf("%s\n%v", ErrCreate, err)
 	}
 
-	id, err := insertResult.LastInsertId()
-	if err != nil {
-		return 0, errors.New(ErrCreate)
-	}
-
-	return uint64(id), nil
+	return uint64(lastInsertId), nil
 }
 
-func (db *rdbms) Read(query string, args []interface{}, dest ...interface{}) error {
+func (db *rdbms) Read(query string, args []any, dest []any) error {
 	stmt, err := db.db.Prepare(query)
 	if err != nil {
-		return errors.New(ErrPrepareStatement)
+		return fmt.Errorf("%s\n%v", ErrPrepareStatement, err)
 	}
 	defer stmt.Close()
 
-	result := stmt.QueryRow(args)
-	err = result.Scan(dest)
+	result := stmt.QueryRow(args...)
+	err = result.Scan(dest...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.New(ErrReadNotFound)
 		}
 
-		return errors.New(ErrRead)
+		return fmt.Errorf("%s\n%v", ErrRead, err)
 	}
 
 	return nil
 }
 
-func (db *rdbms) Update(query string, args []interface{}) error {
+func (db *rdbms) Update(query string, args []any) error {
 	stmt, err := db.db.Prepare(query)
 	if err != nil {
-		return errors.New(ErrPrepareStatement)
+		return fmt.Errorf("%s\n%v", ErrPrepareStatement, err)
 	}
 	defer stmt.Close()
 
 	if _, err = stmt.Exec(args); err != nil {
-		return errors.New(ErrUpdate)
+		return fmt.Errorf("%s\n%v", ErrUpdate, err)
 	}
 
 	return nil
 }
 
-func (db *rdbms) Delete(query string, args []interface{}) error {
+func (db *rdbms) Delete(query string, args []any) error {
 	stmt, err := db.db.Prepare(query)
 	if err != nil {
-		return errors.New(ErrPrepareStatement)
+		return fmt.Errorf("%s\n%v", ErrPrepareStatement, err)
 	}
 	defer stmt.Close()
 
-	if _, err = stmt.Exec(args); err != nil {
-		return errors.New(ErrDelete)
+	if _, err = stmt.Exec(args...); err != nil {
+		return fmt.Errorf("%s\n%v", ErrDelete, err)
 	}
 
 	return nil
